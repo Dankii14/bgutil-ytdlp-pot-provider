@@ -104,6 +104,7 @@ class ProxySpec {
                 localAddress: sourceAddress,
                 family: this.ipFamily,
                 rejectUnauthorized: !disableTlsVerification,
+                keepAlive: false,
             });
         }
         // Proxy must be a string as long as the URL is truthy
@@ -121,6 +122,7 @@ class ProxySpec {
                 localAddress: sourceAddress,
                 family: this.ipFamily,
                 rejectUnauthorized: !disableTlsVerification,
+                keepAlive: false,
             });
         } catch (e) {
             throw new Error(`Failed to create proxy agent for ${loggedProxy}`, {
@@ -495,6 +497,7 @@ export class SessionManager {
                         headers: options?.headers,
                         params: options?.params,
                         httpsAgent: proxySpec.asDispatcher(logger),
+                        timeout: 30000,
                     };
                     const response = await (method === "GET"
                         ? axios.get(url, axiosOpt)
@@ -552,7 +555,7 @@ export class SessionManager {
             innertubeContext?.client.remoteHost || null,
         );
 
-        const bgFetch = this.getFetch(pxySpec, 3, 5000);
+        const bgFetch = this.getFetch(pxySpec, 5, 10000);
         let innertube: Innertube | undefined = undefined;
         if (!contentBinding && innertubeContext) {
             this.logger.warn(
