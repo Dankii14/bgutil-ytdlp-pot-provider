@@ -162,8 +162,10 @@ jobs:
             [ "$exit_code" -eq 0 ] && exit_code=1
           fi
 
-          pot_response=$(echo "$script_response" | \
-            grep -A1 -m1 '\[youtube\] \[pot:bgutil:script-${{ matrix.jsrt }}\] TRACE: JSON response:' | \
+          # here-string instead of `echo |` so that grep -m1 exiting early
+          # can't SIGPIPE the producer and fail the step under pipefail
+          pot_response=$(grep -A1 -m1 '\[youtube\] \[pot:bgutil:script-${{ matrix.jsrt }}\] TRACE: JSON response:' \
+            <<< "$script_response" | \
             tail -n1 | \
             jq -r '.poToken')
           echo "POT: $pot_response"
@@ -274,7 +276,8 @@ jobs:
             esac
             cd ..
           else
-            docker run --name bgutil-provider -d -p ${{ env.PORT }}:4416 \
+            docker run --name bgutil-provider -d \
+              -p 127.0.0.1:${{ env.PORT }}:4416 \
               brainicism/bgutil-ytdlp-pot-provider:ci-${{ matrix.jsrt }}
           fi
 
@@ -291,8 +294,18 @@ jobs:
           fi
           echo "::endgroup::"
 
-          # check that the server is returning a POT
-          pot_response=$(curl -s -X POST "http://127.0.0.1:${{ env.PORT }}/get_pot")
+          # check that non-JSON requests are rejected
+          non_json_status=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+            "http://127.0.0.1:${{ env.PORT }}/get_pot")
+          if [ "$non_json_status" != "415" ]; then
+            echo "::error title=Non-JSON request was not rejected,file=server/src/main.ts::\
+          Expected HTTP 415, received HTTP $non_json_status."
+            exit 1
+          fi
+
+          # check that the server is returning a POT for a JSON request
+          pot_response=$(curl -s -X POST -H 'Content-Type: application/json' \
+            --data '{}' "http://127.0.0.1:${{ env.PORT }}/get_pot")
           echo "::group::Get pot response from the HTTP server"
           if echo "$pot_response" | jq -e . >/dev/null 2>&1; then
             echo "$pot_response" | jq -C
