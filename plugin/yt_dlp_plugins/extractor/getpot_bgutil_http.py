@@ -127,7 +127,7 @@ class BgUtilHTTPPTP(BgUtilPTPBase):
                         'challenge': challenge,
                         'content_binding': get_webpo_content_binding(request)[0],
                         'disable_tls_verification': not request.request_verify_tls,
-                        'proxy': request.request_proxy,
+                        'proxy': None,
                         'innertube_context': request.innertube_context,
                         'source_address': request.request_source_address,
                     }).encode(), headers={'Content-Type': 'application/json'},

@@ -223,7 +223,7 @@ class BgUtilScriptPTPBase(BgUtilPTPBase, abc.ABC):
 
         command_args = [self._jsrt_path, *self._jsrt_args(), self._script_path]
         if proxy := request.request_proxy:
-            command_args.extend(['-p', proxy])
+            pass
         command_args.extend(['-c', get_webpo_content_binding(request)[0]])
         command_args.extend(['--innertube-context', json.dumps(request.innertube_context)])
         if request.bypass_cache:
